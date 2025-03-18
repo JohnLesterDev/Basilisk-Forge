@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+// Load version properties
+def versionFile = file('version.properties')
+def versionProps = new Properties()
+versionProps.load(new FileInputStream(versionFile))
+
+// Configure version
+version = "${versionProps['version.major']}.${versionProps['version.minor']}.${versionProps['version.patch']}"
+if (versionProps['version.label'] != null && !versionProps['version.label'].empty) {
+    version += "-${versionProps['version.label']}"
+}
+
+group = 'dev.johnlester.obelisk'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:32.1.1-jre'
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+    implementation 'ch.qos.logback:logback-classic:1.4.11'
+    implementation 'org.xerial:sqlite-jdbc:3.42.0.0'
+    implementation 'org.hibernate:hibernate-core:6.3.1.Final'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+}
+
+application {
+    mainClass = 'dev.johnlester.obelisk.App'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(16)
+    }
+}
+
+// JAR configuration
+jar {
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Built-By': System.properties['user.name'],
+            'Build-Timestamp': new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ").format(new Date()),
+            'Created-By': "Gradle ${gradle.gradleVersion}",
+            'Build-Jdk': "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+            'Main-Class': 'dev.johnlester.obelisk.App'
+        )
+    }
+    archiveBaseName = 'obelisk-forge'
+}
+
+// Task to increment version
+task incrementPatchVersion {
+    doLast {
+        def major = versionProps['version.major'] as int
+        def minor = versionProps['version.minor'] as int
+        def patch = (versionProps['version.patch'] as int) + 1
+        
+        versionProps['version.patch'] = patch.toString()
+        versionProps.store(versionFile.newWriter(), null)
+    }
+}
+
+// Task to set release version (removes SNAPSHOT)
+task setReleaseVersion {
+    doLast {
+        versionProps['version.label'] = ''
+        versionProps.store(versionFile.newWriter(), null)
+    }
+}
+
+// Task to set next development version
+task setNextDevelopmentVersion {
+    doLast {
+        versionProps['version.label'] = 'SNAPSHOT'
+        versionProps.store(versionFile.newWriter(), null)
+    }
+} 
